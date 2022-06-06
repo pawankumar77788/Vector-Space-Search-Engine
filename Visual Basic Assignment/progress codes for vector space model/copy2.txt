@@ -1,0 +1,327 @@
+Dim i, j As Integer
+Dim t1 As String
+Dim t2 As String
+Dim t3 As String
+Dim qry As String
+Dim finaltext As String
+Dim donelen As Integer
+Dim arrlen As Integer
+Dim qrylen As Integer
+Dim terms(10000, 100) As Double
+Dim arr(100000) As String
+Dim querry(100) As String
+Dim done(1000000) As String
+Dim d1len As Integer
+Dim d2len As Integer
+Dim d3len As Integer
+Dim d1(100) As String
+Dim d2(100) As String
+Dim d3(100) As String
+Private Sub Command1_Click()
+    t1 = Text1.text
+    t2 = Text4.text
+    t3 = Text5.text
+    qry = Text6.text
+    finaltext = t1 + " " + t2 + " " + t3
+    donelen = arrlen = qrylen = 0
+    'text = InputBox("enter the text:")
+    'MsgBox ("the position is " + Str(InStr(1, text, " ")))
+    Call wordsintext(finaltext, arr, arrlen)
+    Call wordsintext(qry, querry, qrylen)
+    Call wordsintext(t1, d1, d1len)
+    Call wordsintext(t2, d2, d2len)
+    Call wordsintext(t3, d3, d3len)
+    Call sort(arr, arrlen)
+    Call sort(querry, qrylen)
+    Call sort(d1, d1len)
+    Call sort(d2, d2len)
+    Call sort(d3, d3len)
+    Call remduplication(done, donelen, arr, arrlen)
+    'MsgBox (n) here it prints n 1 value less as array starts from 0
+    For i = 0 To 10000
+        For j = 0 To 100
+            terms(i, j) = 0
+        Next j
+    Next i
+    Call termfrequency
+    For i = 0 To donelen - 1 'DFI
+        terms(i, 4) = 0
+        For j = 0 To 2
+            If terms(i, j) <> 0 Then
+            terms(i, 4) = terms(i, 4) + 1
+            End If
+        Next j
+    Next i
+    For i = 0 To donelen - 1 'D/DFI D:no of documents 3
+        terms(i, 5) = Round(3 / terms(i, 4), 2)
+    Next i
+    For i = 0 To donelen - 1 'IDF = Log(D/dfi)
+        terms(i, 6) = Round(Log(terms(i, 5)) / Log(10), 4)
+    Next i
+    For i = 0 To donelen - 1 'weights of d1
+        terms(i, 7) = Round(terms(i, 0) * terms(i, 6), 4)
+    Next i
+        For i = 0 To donelen - 1 'weights of d2
+        terms(i, 8) = Round(terms(i, 1) * terms(i, 6), 4)
+    Next i
+        For i = 0 To donelen - 1 'weights of d3
+        terms(i, 9) = Round(terms(i, 2) * terms(i, 6), 4)
+    Next i
+        For i = 0 To donelen - 1 'weights of Q
+        terms(i, 10) = Round(terms(i, 3) * terms(i, 6), 4)
+    Next i
+    'For i = 0 To donelen - 1
+    '    For j = 0 To 10
+    '        Print (Str(terms(i, j)) + "    ");
+    '    Next j
+    '    Print (vbNewLine)
+    'Next i
+    table.Rows = donelen + 4
+    table.TextMatrix(0, 0) = " "
+    table.TextMatrix(0, 1) = "D1"
+    table.TextMatrix(0, 2) = "D2"
+    table.TextMatrix(0, 3) = "D3"
+    table.TextMatrix(0, 4) = "Q"
+    table.TextMatrix(0, 5) = "DFI"
+    table.TextMatrix(0, 6) = "D/DFI"
+    table.TextMatrix(0, 7) = "IDF"
+    table.TextMatrix(0, 8) = "WD1"
+    table.TextMatrix(0, 9) = "WD2"
+    table.TextMatrix(0, 10) = "WD3"
+    table.TextMatrix(0, 11) = "WDQ"
+    For i = 1 To donelen
+    table.TextMatrix(i, 0) = done(i - 1)
+    Next i
+    table.TextMatrix(donelen + 1, 0) = "eucledian vector"
+    table.TextMatrix(donelen + 2, 0) = "DOT product"
+    table.TextMatrix(donelen + 3, 0) = "cos theta"
+    'round(,)                                                                             'euclidean length of vector
+    terms(donelen, 7) = 0  'assign |d1| = 0
+    For i = 0 To donelen - 1
+        terms(donelen, 7) = Round(terms(donelen, 7) + (terms(i, 7) ^ 2), 4)
+    Next i
+    terms(donelen, 7) = Round(Sqr(terms(donelen, 7)), 4)
+    
+    terms(donelen, 8) = 0  'assign |d2| = 0
+    For i = 0 To donelen - 1
+        terms(donelen, 8) = Round(terms(donelen, 8) + (terms(i, 8) ^ 2), 4)
+    Next i
+    terms(donelen, 8) = Round(Sqr(terms(donelen, 8)), 4)
+
+    terms(donelen, 9) = 0  'assign |d3| = 0
+    For i = 0 To donelen - 1
+        terms(donelen, 9) = Round(terms(donelen, 9) + (terms(i, 9) ^ 2), 4)
+    Next i
+    terms(donelen, 9) = Round(Sqr(terms(donelen, 9)), 4)
+
+    terms(donelen, 10) = 0  'assign |Q| = 0
+    For i = 0 To donelen - 1
+        terms(donelen, 10) = Round(terms(donelen, 10) + (terms(i, 10) ^ 2), 4)
+    Next i
+    terms(donelen, 10) = Round(Sqr(terms(donelen, 10)), 4)
+    
+    terms(donelen + 1, 7) = 0                                                         'dot product
+    For i = 0 To donelen - 1
+            terms(donelen + 1, 7) = terms(donelen + 1, 7) + terms(i, 7) * terms(i, 10)
+    Next i
+    terms(donelen + 1, 7) = Round(terms(donelen + 1, 7), 4)
+    
+    For i = 0 To donelen - 1
+            terms(donelen + 1, 8) = terms(donelen + 1, 8) + terms(i, 8) * terms(i, 10)
+    Next i
+    terms(donelen + 1, 8) = Round(terms(donelen + 1, 8), 4)
+    
+    For i = 0 To donelen - 1
+            terms(donelen + 1, 9) = terms(donelen + 1, 9) + terms(i, 9) * terms(i, 10)
+    Next i
+    terms(donelen + 1, 9) = Round(terms(donelen + 1, 9), 4)
+    
+    terms(donelen + 2, 7) = Round(terms(donelen + 1, 7) / (terms(donelen, 10) * terms(donelen, 7)), 4) 'cosine theta of |d1|
+    terms(donelen + 2, 8) = Round(terms(donelen + 1, 8) / (terms(donelen, 10) * terms(donelen, 8)), 4) 'cosine theta of |d1|
+    terms(donelen + 2, 9) = Round(terms(donelen + 1, 9) / (terms(donelen, 10) * terms(donelen, 9)), 4) 'cosine theta of |d1|
+    
+    For i = 1 To donelen + 3
+        For j = 1 To 11
+            table.TextMatrix(i, j) = Str(terms(i - 1, j - 1))
+        Next j
+    Next i
+    'MsgBox (Format(2, "0.0000"))
+    Dim ar(3) As Double
+    ar(0) = terms(donelen + 2, 7)
+    ar(1) = terms(donelen + 2, 8)
+    ar(2) = terms(donelen + 2, 9)
+    Call sortnum(ar, 3)
+    If ar(0) = terms(donelen + 2, 7) Then
+        Text7.text = "Document 1"
+    End If
+    If ar(0) = terms(donelen + 2, 8) Then
+        Text7.text = "Document 2"
+    End If
+    If ar(0) = terms(donelen + 2, 9) Then
+        Text7.text = "Document 3"
+    End If
+    If ar(1) = terms(donelen + 2, 7) Then
+        Text3.text = "Document 1"
+    End If
+    If ar(1) = terms(donelen + 2, 8) Then
+        Text3.text = "Document 2"
+    End If
+    If ar(1) = terms(donelen + 2, 9) Then
+        Text3.text = "Document 3"
+    End If
+    If ar(2) = terms(donelen + 2, 7) Then
+        Text2.text = "Document 1"
+    End If
+    If ar(2) = terms(donelen + 2, 8) Then
+        Text2.text = "Document 2"
+    End If
+    If ar(2) = terms(donelen + 2, 9) Then
+        Text2.text = "Document 3"
+    End If
+End Sub
+
+Private Sub Command2_Click()
+    Text1.text = ""
+    Text4.text = ""
+    Text5.text = ""
+    Text6.text = ""
+    Text1.SetFocus
+End Sub
+
+Private Sub Dir1_Change()
+File1.Path = Dir1.Path
+End Sub
+
+Private Sub Drive1_Change()
+Dir1.Path = Drive1.Drive
+End Sub
+
+Public Sub wordsintext(text As String, ByRef arr() As String, ByRef n As Integer)
+    Dim ln As Integer
+    i = 1
+    j = 0
+    text = Trim(text)
+    ln = Len(text)
+    Dim cnt As Integer
+    cnt = 0
+    Do While i <= ln
+        Dim ch As String
+        ch = Mid(text, i, 1)
+        If ch <> " " Then
+            cnt = cnt + 1
+        Else
+            If Mid(text, i - cnt, cnt) <> "" And Mid(text, i - cnt, cnt) <> " " And Mid(text, i - cnt, cnt) <> "  " Then
+            arr(j) = Mid(text, i - cnt, cnt)
+            j = j + 1
+            cnt = 0
+            End If
+        End If
+        i = i + 1
+    Loop
+    If Mid(text, i - cnt, cnt) <> "" And Mid(text, i - cnt, cnt) <> " " And Mid(text, i - cnt, cnt) <> "  " Then
+    arr(j) = Mid(text, i - cnt, cnt)
+    End If
+    n = j
+End Sub
+
+Public Sub sort(ByRef arr() As String, n As Integer)
+    For i = 0 To n - 1
+        For j = 0 To n - i - 1
+        If arr(j) <> "" And arr(j) <> " " And arr(j) <> "  " And arr(j + 1) <> "" And arr(j + 1) <> " " And arr(j + 1) <> "  " Then
+            If Len(arr(j)) > Len(arr(j + 1)) Then
+                Dim temp As String
+                temp = arr(j)
+                arr(j) = arr(j + 1)
+                arr(j + 1) = temp
+            End If
+        End If
+        Next j
+    Next i
+    For i = 0 To n - 1
+        For j = 0 To n - i - 1
+        If arr(j) <> "" And arr(j) <> " " And arr(j) <> "  " And arr(j + 1) <> "" And arr(j + 1) <> " " And arr(j + 1) <> "  " Then
+            If Asc(arr(j)) > Asc(arr(j + 1)) Then
+                temp = arr(j)
+                arr(j) = arr(j + 1)
+                arr(j + 1) = temp
+            End If
+        End If
+        Next j
+    Next i
+End Sub
+
+Public Sub remduplication(ByRef done() As String, ByRef j As Integer, arr() As String, n As Integer)
+    For i = 0 To n
+        If i = 0 Then
+            j = 0
+            done(j) = arr(i)
+            j = j + 1
+        End If                              ' a a b c c d e f f
+            Dim k As Integer
+            For k = 0 To j
+                If arr(i) = done(k) Then
+                    Exit For
+                End If
+            Next k
+            If k = j + 1 Then
+                done(j) = arr(i)
+                j = j + 1
+            End If
+    Next i
+End Sub
+
+Public Sub termfrequency()
+    For i = 0 To donelen - 1
+        For j = 0 To 3
+            terms(i, j) = 0
+        Next j
+    Next i
+    For i = 0 To donelen - 1
+        For j = 0 To 3
+        Dim k As Integer
+            If j = 0 Then
+                For k = 0 To d1len
+                    If done(i) = d1(k) Then
+                        terms(i, j) = terms(i, j) + 1
+                    End If
+                Next k
+            End If
+            If j = 1 Then
+                For k = 0 To d2len
+                    If done(i) = d2(k) Then
+                        terms(i, j) = terms(i, j) + 1
+                    End If
+                Next k
+            End If
+            If j = 2 Then
+                For k = 0 To d3len
+                    If done(i) = d3(k) Then
+                        terms(i, j) = terms(i, j) + 1
+                    End If
+                Next k
+            End If
+            If j = 3 Then
+                For k = 0 To qrylen
+                    If done(i) = querry(k) Then
+                        terms(i, j) = terms(i, j) + 1
+                    End If
+                Next k
+            End If
+        Next j
+    Next i
+End Sub
+
+
+Public Sub sortnum(ByRef ar() As Double, n As Integer)
+Dim temp As Double
+    For i = 0 To n - 2
+        For j = 0 To n - i - 2
+            If ar(j) < ar(j + 1) Then
+                temp = ar(j)
+                ar(j) = ar(j + 1)
+                ar(j + 1) = temp
+            End If
+        Next j
+    Next i
+End Sub
+

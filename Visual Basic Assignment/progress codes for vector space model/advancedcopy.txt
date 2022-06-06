@@ -1,0 +1,269 @@
+Dim i As Integer
+Dim j As Integer
+Dim k As Integer
+Dim qry As String
+Dim finaltext As String
+Dim donelen As Integer
+Dim arrlen As Integer
+Dim qrylen As Integer
+Dim terms(10000, 10000) As Double
+Dim arr(10000) As String
+Dim querry(100) As String
+Dim done(10000) As String
+Dim fle(10000, 10000) As String
+Dim flen(10000) As Integer
+Dim filecontent(10000) As String
+Private Sub Command1_Click()
+    't1 = Text1.text
+    't2 = Text4.text
+    't3 = Text5.text
+    For i = 0 To File1.ListCount - 1
+    Dim strFile As String
+    'With CD
+    '    .ShowOpen
+    '   Text1.Text = .FileName
+    'End With
+    Open File1.Path + "\" + File1.List(i) For Input As #1
+    Do While Not (EOF(1))
+        Line Input #1, strFile
+        filecontent(i) = filecontent(i) + " " + strFile
+    Loop
+    Close #1
+    Next i
+    qry = Text6.text
+    'finaltext = t1 + " " + t2 + " " + t3
+    For i = 0 To File1.ListCount - 1
+    finaltext = finaltext + filecontent(i)
+    Next i
+    donelen = arrlen = qrylen = 0
+    'text = InputBox("enter the text:")
+    'MsgBox ("the position is " + Str(InStr(1, text, " ")))
+    Call wordsintext(finaltext, arr, arrlen)
+    Call wordsintext(qry, querry, qrylen)
+    For i = 0 To File1.ListCount - 1
+    k = i
+    Call wordsintext1(filecontent(i), k, flen(i))
+    Next i
+    
+    Call sort(arr, arrlen)
+    Call sort(querry, qrylen)
+    Call remduplication(done, donelen, arr, arrlen)
+    Call termfrequency
+    For i = 0 To donelen - 1 'DFI
+        terms(i, File1.ListCount + 1) = 0
+        For j = 0 To File1.ListCount - 1
+            If terms(i, j) <> 0 Then
+            terms(i, File1.ListCount + 1) = terms(i, File1.ListCount + 1) + 1
+            End If
+        Next j
+    Next i
+    For i = 0 To donelen - 1 'D/DFI D:no of documents 3
+        terms(i, File1.ListCount + 2) = Round(3 / terms(i, File1.ListCount + 1), 2)
+    Next i
+    For i = 0 To donelen - 1 'IDF = Log(D/dfi)
+        terms(i, File1.ListCount + 3) = Round(Log(terms(i, File1.ListCount + 2)) / Log(10), 4)
+    Next i
+    Dim rowlen As Integer
+    rowlen = ((File1.ListCount + 1) * 2) + 3
+    For i = 0 To donelen - 1
+        For j = File1.ListCount + 4 To rowlen - 1
+            terms(i, j) = Round(terms(i, j - 4 - File1.ListCount) * terms(i, File1.ListCount + 3), 4)
+        Next j
+    Next i
+    
+    table.Rows = donelen + 4
+    table.Cols = rowlen + 1
+    table.TextMatrix(0, 0) = " "
+    For j = 1 To File1.ListCount
+        table.TextMatrix(0, j) = "D" + Str(j)
+    Next j
+    table.TextMatrix(0, File1.ListCount + 1) = "Q"
+    table.TextMatrix(0, File1.ListCount + 2) = "DFI"
+    table.TextMatrix(0, File1.ListCount + 3) = "D/DFI"
+    table.TextMatrix(0, File1.ListCount + 4) = "IDF"
+    For j = File1.ListCount + 5 To rowlen - 1
+    i = 1
+    table.TextMatrix(0, j) = "WD" + Str(i)
+    i = i + 1
+    Next j
+
+    table.TextMatrix(0, rowlen) = "WDQ"
+    For i = 1 To donelen
+    table.TextMatrix(i, 0) = done(i - 1)
+    Next i
+    table.TextMatrix(donelen + 1, 0) = "eucledian vector"
+    table.TextMatrix(donelen + 2, 0) = "DOT product"
+    table.TextMatrix(donelen + 3, 0) = "cos theta"
+    'euclidean length of vector
+    
+    For j = File1.ListCount + 4 To rowlen - 1
+    terms(donelen, j) = 0
+        For i = 0 To donelen - 1
+            terms(donelen, j) = Round(terms(donelen, j) + (terms(i, j) ^ 2), 4)
+        Next i
+    terms(donelen, j) = Round(Sqr(terms(donelen, j)), 4)
+    Next j
+        
+    For j = File1.ListCount + 4 To rowlen - 2
+        terms(donelen + 1, j) = 0
+        For i = 0 To donelen - 1
+            terms(donelen + 1, j) = terms(donelen + 1, j) + terms(i, j) * terms(i, rowlen - 1)
+        Next i
+    terms(donelen + 1, j) = Round(terms(donelen + 1, j), 4)
+    Next j
+        
+    For j = File1.ListCount + 4 To rowlen - 2
+        terms(donelen + 2, j) = Round(terms(donelen + 1, j) / (terms(donelen, rowlen - 1) * terms(donelen, j)), 4)
+    Next j
+    
+    For i = 1 To donelen + 3
+        For j = 1 To rowlen
+            table.TextMatrix(i, j) = Str(terms(i - 1, j - 1))
+        Next j
+    Next i
+End Sub
+
+Private Sub Dir1_Change()
+File1.Path = Dir1.Path
+End Sub
+
+Private Sub Drive1_Change()
+Dir1.Path = Drive1.Drive
+End Sub
+
+Public Sub wordsintext(text As String, ByRef arr() As String, ByRef n As Integer)
+    Dim ln As Integer
+    i = 1
+    j = 0
+    text = Trim(text)
+    ln = Len(text)
+    Dim cnt As Integer
+    cnt = 0
+    Do While i <= ln
+        Dim ch As String
+        ch = Mid(text, i, 1)
+        If ch <> " " Then
+            cnt = cnt + 1
+        Else
+            If Mid(text, i - cnt, cnt) <> "" And Mid(text, i - cnt, cnt) <> " " And Mid(text, i - cnt, cnt) <> "  " Then
+            arr(j) = Mid(text, i - cnt, cnt)
+            j = j + 1
+            cnt = 0
+            End If
+        End If
+        i = i + 1
+    Loop
+    If Mid(text, i - cnt, cnt) <> "" And Mid(text, i - cnt, cnt) <> " " And Mid(text, i - cnt, cnt) <> "  " Then
+    arr(j) = Mid(text, i - cnt, cnt)
+    End If
+    n = j
+End Sub
+
+
+Public Sub wordsintext1(text As String, k As Integer, ByRef n As Integer)
+    Dim ln As Integer
+    i = 1
+    j = 0
+    text = Trim(text)
+    ln = Len(text)
+    Dim cnt As Integer
+    cnt = 0
+    Do While i <= ln
+        Dim ch As String
+        ch = Mid(text, i, 1)
+        If ch <> " " Then
+            cnt = cnt + 1
+        Else
+            If Mid(text, i - cnt, cnt) <> "" And Mid(text, i - cnt, cnt) <> " " And Mid(text, i - cnt, cnt) <> "  " Then
+            fle(k, j) = Mid(text, i - cnt, cnt)
+            j = j + 1
+            cnt = 0
+            End If
+        End If
+        i = i + 1
+    Loop
+    If Mid(text, i - cnt, cnt) <> "" And Mid(text, i - cnt, cnt) <> " " And Mid(text, i - cnt, cnt) <> "  " Then
+    fle(k, j) = Mid(text, i - cnt, cnt)
+    End If
+    n = j
+End Sub
+
+Public Sub sort(ByRef arr() As String, n As Integer)
+    For i = 0 To n - 1
+        For j = 0 To n - i - 1
+        If arr(j) <> "" And arr(j) <> " " And arr(j) <> "  " And arr(j + 1) <> "" And arr(j + 1) <> " " And arr(j + 1) <> "  " Then
+            If Len(arr(j)) > Len(arr(j + 1)) Then
+                Dim temp As String
+                temp = arr(j)
+                arr(j) = arr(j + 1)
+                arr(j + 1) = temp
+            End If
+        End If
+        Next j
+    Next i
+    For i = 0 To n - 1
+        For j = 0 To n - i - 1
+        If arr(j) <> "" And arr(j) <> " " And arr(j) <> "  " And arr(j + 1) <> "" And arr(j + 1) <> " " And arr(j + 1) <> "  " Then
+            If Asc(arr(j)) > Asc(arr(j + 1)) Then
+                temp = arr(j)
+                arr(j) = arr(j + 1)
+                arr(j + 1) = temp
+            End If
+        End If
+        Next j
+    Next i
+End Sub
+
+Public Sub remduplication(ByRef done() As String, ByRef j As Integer, arr() As String, n As Integer)
+    For i = 0 To n
+        If i = 0 Then
+            j = 0
+            done(j) = arr(i)
+            j = j + 1
+        End If                              ' a a b c c d e f f
+            Dim k As Integer
+            For k = 0 To j
+                If arr(i) = done(k) Then
+                    Exit For
+                End If
+            Next k
+            If k = j + 1 Then
+                done(j) = arr(i)
+                j = j + 1
+            End If
+    Next i
+End Sub
+
+Public Sub termfrequency()
+    For i = 0 To donelen - 1
+        For j = 0 To File1.ListCount
+        Dim k As Integer
+            For k = 0 To flen(i)
+                If done(i) = fl(i, k) Then
+                    terms(i, j) = terms(i, j) + 1
+                End If
+            Next k
+            If j = File1.ListCount Then
+                For k = 0 To qrylen
+                    If done(i) = querry(k) Then
+                        terms(i, j) = terms(i, j) + 1
+                    End If
+                Next k
+            End If
+        Next j
+    Next i
+End Sub
+
+
+Public Sub sortnum(ByRef ar() As Double, n As Integer)
+Dim temp As Double
+    For i = 0 To n - 2
+        For j = 0 To n - i - 2
+            If ar(j) < ar(j + 1) Then
+                temp = ar(j)
+                ar(j) = ar(j + 1)
+                ar(j + 1) = temp
+            End If
+        Next j
+    Next i
+End Sub
